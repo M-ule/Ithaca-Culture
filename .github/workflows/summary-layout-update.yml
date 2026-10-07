@@ -1,0 +1,63 @@
+name: Update summary layout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/summary-layout-update.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update summary layout and logic
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          original = s
+
+          old = "+metricBox('부족 항목',shortageValues)+metricBox('최장 소요',slowValue);"
+          new = "+metricBox('생산 계획 부족',shortageValues,'metric-wide2');"
+          assert old in s, 'production summary pattern not found'
+          s = s.replace(old, new, 1)
+
+          pattern = r" const goalRows=.*?;\$\('wonderContext'\)"
+          replacement = " const powerShortItems=D.items.map(i=>{const {current,required}=powerComparison(i.id,powerReq.need[i.id]);return{i,diff:current-required}}).filter(x=>Number.isFinite(x.diff)&&x.diff<0),powerShortValues=powerShortItems.length?powerShortItems.map(x=>x.i.name):['없음'],reach=maxLevel(t,c);metrics('goalSummary',[['최대 도달(자원 기준)','Lv.'+reach],['생산력 부족 항목',powerShortValues,'metric-wide3']]);$('wonderContext')"
+          s, n = re.subn(pattern, replacement, s, count=1, flags=re.S)
+          assert n == 1, f'wonder summary pattern replacements={n}'
+
+          tooltip_anchor = "'부족 항목':'현재 보유량과 예상 생산량을 반영해도 필요한 양보다 부족한 항목을 표시합니다. 부족한 항목이 없으면 ‘없음’으로 표시됩니다.',"
+          tooltip_new = tooltip_anchor + "\n'생산 계획 부족':'현재 입력한 생산 계획을 실행할 때, 보유량과 예상 생산량을 반영해도 상위 생산에 필요한 재료가 부족한 항목입니다.',\n'생산력 부족 항목':'불가사의 목표 레벨까지 필요한 수량을 운영 시간 안에 생산하기에 현재 생산력이 부족한 항목입니다.',"
+          assert tooltip_anchor in s, 'tooltip anchor not found'
+          s = s.replace(tooltip_anchor, tooltip_new, 1)
+
+          css = "\n/* summary layout: production plan 2 cols, wonder power shortage 3 cols */\n.metric-wide3{grid-column:span 3}\n@media(max-width:720px){.metric-wide3{grid-column:1/-1}}\n"
+          assert '</style>' in s
+          s = s.replace('</style>', css + '</style>', 1)
+
+          assert s != original
+          assert "metricBox('생산 계획 부족',shortageValues,'metric-wide2')" in s
+          assert "['생산력 부족 항목',powerShortValues,'metric-wide3']" in s
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/summary-layout-update.yml
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Refine production and wonder summaries"
+          git push
