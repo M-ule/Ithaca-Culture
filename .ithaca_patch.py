@@ -59,6 +59,7 @@ s=s[:setup_start]+setup_new+s[setup_end:]
 slow=re.compile(r",needed=overview\.filter\(x=>x\.need>1e-8\);let slowValue=\['없음'\];if\(needed\.length\)\{const unresolved=needed\.find\(x=>x\.h===null\);if\(unresolved\)slowValue=\[\[unresolved\.i\.name,'생산 설정 확인'\]\];else\{const x=needed\.reduce\(\(a,b\)=>b\.h>a\.h\?b:a\);slowValue=\[\[x\.i\.name,time\(x\.h\)\]\]\}\}")
 s,n=slow.subn('',s,count=1)
 if n!=1: raise SystemExit('slow-time cleanup failed')
+must_replace("shortageValues=shortageItems.length?shortageItems.map(x=>x.i.name):['없음']$('bonusSummary')","shortageValues=shortageItems.length?shortageItems.map(x=>x.i.name):['없음'];$('bonusSummary')",label='slow-time semicolon')
 must_replace("metricBox('생산 계획 부족',shortageValues,'metric-wide2')","metricBox('조정 필요 생산 항목',shortageValues,'metric-wide2')",label='summary rename')
 
 # Product rows no longer have remain_/needtime_ elements, so guard those updates.
