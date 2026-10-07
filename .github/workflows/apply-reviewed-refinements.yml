@@ -35,3 +35,4 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Reapply reviewed Ithaca simulator refinements"
           git push
+# retry after syntax guard fix
