@@ -1,0 +1,51 @@
+name: Fix power comparison
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-power-comparison.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch completed-cycle power calculation
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = "if(!state.detail){const h=hours(id,{hours:''});return{current:h>0?totals(id).rate/base*100:0,required:needed===0?0:h>0?needed/h/base*100:NaN}}"
+          new = "if(!state.detail){const h=hours(id,{hours:''}),actual=totals(id).out;return{current:h>0?actual/(h*base)*100:0,required:needed===0?0:h>0?needed/(h*base)*100:NaN}}"
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one target, found {count}')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+      - name: JavaScript syntax check
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path('index.html').read_text(encoding='utf-8')
+          blocks = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', s, re.S)
+          if len(blocks) != 1:
+              raise SystemExit(f'Expected 1 inline script, found {len(blocks)}')
+          Path('/tmp/ithaca.js').write_text(blocks[0], encoding='utf-8')
+          PY
+          node --check /tmp/ithaca.js
+          grep -F "current:h>0?actual/(h*base)*100:0" index.html
+          ! grep -F "current:h>0?totals(id).rate/base*100:0" index.html
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name "Mule"
+          git config user.email "lic960920@gmail.com"
+          git add index.html
+          git commit -m "Use completed production for power comparison"
+          git push
