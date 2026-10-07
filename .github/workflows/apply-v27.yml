@@ -21,7 +21,7 @@ jobs:
 
       - name: Build v27 index
         run: |
-          cat .tmp_v27/part1.b64 .tmp_v27/part2.b64 .tmp_v27/part3.b64 .tmp_v27/part4.b64 | base64 -d | gzip -d > index.html
+          cat .tmp_v27/part1.b64 .tmp_v27/p2a.b64 .tmp_v27/p2b.b64 .tmp_v27/p2c.b64 .tmp_v27/p2d.b64 .tmp_v27/p2e.b64 .tmp_v27/part3.b64 .tmp_v27/part4.b64 | base64 -d | gzip -d > index.html
           rm -rf .tmp_v27
           rm -f .github/workflows/apply-v27.yml
 
