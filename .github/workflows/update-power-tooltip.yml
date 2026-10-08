@@ -1,0 +1,33 @@
+name: Update power tooltip
+
+on:
+  push:
+    paths:
+      - '.github/workflows/update-power-tooltip.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update tooltip wording
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="건물 1채의 레벨·생산 주기별 생산력을 같은 기준으로 비교하는 표입니다. Lv6·30분 생산을 100으로 봅니다."
+          new="건물 1채의 레벨·생산 주기별 생산력을 같은 기준으로 비교하는 표입니다. 상품 Lv6·30분 생산을 100으로 봅니다."
+          assert s.count(old)==1, f'expected 1 match, got {s.count(old)}'
+          p.write_text(s.replace(old,new),encoding='utf-8')
+          PY
+      - name: Commit wording change
+        run: |
+          git config user.name "Mule"
+          git config user.email "lic960920@gmail.com"
+          git add index.html
+          git commit -m "Clarify product-based power benchmark"
+          git push
